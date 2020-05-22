@@ -1,0 +1,12 @@
+Source: python3-connemara-basebackup
+Section: python
+Priority: optional
+Maintainer: rdunklau, <ronan.dunklau@people-doc.com>
+Build-Depends: python3
+Standards-Version: 3.9.2
+
+Package: python3-connemara-basebackup
+Architecture: all
+Section: python
+Depends: ${python3:Depends}, ${misc:Depends}, python3-pglast, python3-psycopg2
+Description: Tool to perform a logical basebackup, remapping schemas
