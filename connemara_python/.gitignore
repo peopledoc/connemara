@@ -6,3 +6,4 @@ debian/files
 debian/python3-connemara-basebackup.substvars
 *.pyc
 *egg-info
+dist/

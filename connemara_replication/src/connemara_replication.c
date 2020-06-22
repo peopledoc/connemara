@@ -206,7 +206,7 @@ RunIdentifySystem(PGconn *conn, char **sysid, uint32_t *starttli,
 	{
 		if (sscanf(PQgetvalue(res, 0, 2), "%X/%X", &hi, &lo) != 2)
 		{
-			log_crit("could not parse transaction log location \"%s\"\n",
+			log_crit("main", "could not parse transaction log location \"%s\"\n",
 					 PQgetvalue(res, 0, 2));
 
 			PQclear(res);
@@ -328,7 +328,7 @@ sendFeedback(LogicalReplicationState * state, int64_t now)
 
 	if (PQputCopyData(state->source_conn, replybuf, len) <= 0 || PQflush(state->source_conn))
 	{
-		log_crit("could not send feedback packet: %s",
+		log_crit("feedback", "could not send feedback packet: %s",
 				 PQerrorMessage(state->source_conn));
 		exit(1);
 	}

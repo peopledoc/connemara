@@ -36,6 +36,7 @@ def logger_setup(level):
     stdhandler.setLevel(level)
     stdhandler.setFormatter(frmat)
     logger.addHandler(stdhandler)
+    return logger
 
 
 CONF_LOCATIONS = [
@@ -118,7 +119,7 @@ def should_apply_post_data_stmt(stmt):
 
 if __name__ == '__main__':
     args = argparser().parse_args()
-    logger_setup(logging.DEBUG if args.debug else logging.WARNING)
+    logger = logger_setup(logging.DEBUG if args.debug else logging.WARNING)
     conf = load_conf(args)
 
     source_dsn = args.source
@@ -186,6 +187,7 @@ if __name__ == '__main__':
     restore_tables(args.source, args.target, table_mapping,
                    snapshot_name=dumper.snapshot_name,
                    include_inherited=args.is_timescaledb)
+    logger.info("Table content restored, now onto post data objects")
     # Finally, apply «the rest»
     conn = psycopg2.connect(target_dsn)
     cur = conn.cursor()
@@ -194,7 +196,13 @@ if __name__ == '__main__':
         # filter them.
         if should_apply_post_data_stmt(stmt):
             cur.execute(IndentedStream(expression_level=1)(stmt))
-    cur.execute("SELECT pg_replication_origin_create(%s)", (slot_name,))
-    cur.execute("SELECT pg_replication_origin_advance(%s, %s)",
-                (slot_name, dumper.consistent_point))
+    logger.info("Everything restored")
+    if slot_name is None:
+        logger.info("No slot name given, don't create a replication_origin")
+    else:
+        logger.info("Creating replication origin")
+        cur.execute("SELECT pg_replication_origin_create(%s)", (slot_name,))
+        cur.execute("SELECT pg_replication_origin_advance(%s, %s)",
+                    (slot_name, dumper.consistent_point))
     cur.execute("COMMIT")
+    logger.info("Finished !")
