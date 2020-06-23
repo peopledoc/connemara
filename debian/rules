@@ -24,7 +24,7 @@ override_dh_auto_build:
 
 override_dh_auto_install:
 	mkdir -p debian/connemara/usr/bin/
-	cp build/connemara_replication debian/connemara/usr/bin/
-	cp replayer/connemara_replay.pl debian/connemara/usr/bin/
-	cp replayer/connemara_rewrite.pm debian/connemara/usr/bin/
+	install -m 755 build/connemara_replication debian/connemara/usr/bin/
+	install -m 755 replayer/connemara_replay.pl debian/connemara/usr/bin/
+	install -m 755 replayer/connemara_rewrite.pm debian/connemara/usr/bin/
 	dh_auto_install $@
