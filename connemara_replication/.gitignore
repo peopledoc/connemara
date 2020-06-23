@@ -1,0 +1,7 @@
+*~
+*.o
+*.lo
+*.a
+*.la
+/build*/
+autom4te.cache

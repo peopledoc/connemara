@@ -1,0 +1,30 @@
+#!/usr/bin/make -f
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+	#cd connemara_python && dh $@ --with python3 --buildsystem=pybuild
+	#cd connemara_replication && dh $@ --buildsystem=cmake
+
+override_dh_auto_clean:
+	rm build -fr
+	dh_clean
+
+override_dh_auto_configure:
+	@echo "Configure connemara_replication"
+	# This also skips the "configure" part of pybuild which we don't need.
+	mkdir build/
+	cd build/ && cmake ../connemara_replication
+	dh_auto_configure $@
+
+override_dh_auto_test:
+
+override_dh_auto_build:
+	@echo "Building connemara_replication"
+	cd build && make
+	dh_auto_build $@
+
+override_dh_auto_install:
+	mkdir -p debian/connemara/usr/bin/
+	install -m 755 build/connemara_replication debian/connemara/usr/bin/
+	install -m 755 replayer/connemara_replay.pl debian/connemara/usr/bin/
+	install -m 755 replayer/connemara_rewrite.pm debian/connemara/usr/bin/
+	dh_auto_install $@

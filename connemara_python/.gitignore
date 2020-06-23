@@ -1,0 +1,9 @@
+build/
+python3-connemara-basebackup/
+.pybuild
+debian/debhelper-build-stamp
+debian/files
+debian/python3-connemara-basebackup.substvars
+*.pyc
+*egg-info
+dist/
