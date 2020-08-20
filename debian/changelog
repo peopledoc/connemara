@@ -1,3 +1,10 @@
+connemara (1.0.1) UNRELEASED; urgency=medium
+
+  * Update to pglast
+
+ -- MAINTAINER <ronan.dunklau@people-doc.com>  Mon, 17 Aug 2020 09:23:50 +0200
+
+
 connemara (1.0.0) UNRELEASED; urgency=medium
 
   * Initial package
