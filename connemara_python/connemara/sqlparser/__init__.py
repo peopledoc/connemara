@@ -206,10 +206,13 @@ class SchemaRestorer():
                 continue
 
             if statement.node_tag == 'AlterTableStmt':
+                # Ignore ALTER INDEX statement altogether
+                if statement.relkind == ObjectType.OBJECT_INDEX:
+                    continue
+
                 # We assume that if we have an add constraint command, it's
                 # the only one. This is safe because we only expect to work
                 # on pg_dump outputs here.
-
                 if any(cmd.subtype.value == AlterTableType.AT_AddConstraint
                        for cmd in statement.cmds):
                     post_data.append(statement)

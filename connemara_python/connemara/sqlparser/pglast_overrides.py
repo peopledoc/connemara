@@ -8,34 +8,28 @@ from pglast.printer import node_printer
 from pglast.node import Missing, Node, List
 from pglast.printers import dml
 from pglast import enums
-from pglast.printers.ddl import OBJECT_NAMES
+from pglast.printers.ddl import OBJECT_NAMES, AlterTableTypePrinter
 import re
 
-@node_printer('CollateClause', override=True)
-def collate_clause(node, output):
-    if node.arg:
-        output.print_node(node.arg)
-    output.swrite('COLLATE ')
-    output.print_name(node.collname, '.')
+# Monkey patch AlterTableTypePrinter
 
-@node_printer('AlterEnumStmt', override=True)
-def alter_enum_stmt(node, output):
-    output.write("ALTER TYPE ")
-    output.print_name(node.typeName)
-    if node.newVal:
-        if node.oldVal:
-            output.write("RENAME VALUE ")
-            output._write_quoted_string(node.oldVal.value)
-            output.write("TO ")
-        else:
-            output.write("ADD VALUE ")
-            if node.skipIfNewValExists:
-                output.write("IF NOT EXISTS ")
-        output._write_quoted_string(node.newVal.value)
-    if node.newValNeighbor:
-        if node.newValIsAfter:
-            output.write(" AFTER ")
-        else:
-            output.write(" BEFORE ")
-        output._write_quoted_string(node.newValNeighbor.value)
+def AT_SetStatistics(self, node, output):
+    output.write("ALTER COLUMN ")
+    if node.name:
+        output.print_name(node.name)
+    elif node.num:
+        output.write(str(node.num.value))
+    output.write(" SET STATISTICS ")
+    output.print_node(node['def'])
 
+
+def AT_SetUnLogged(self, node, output):
+    output.write("SET UNLOGGED")
+
+def AT_SetLogged(self, node, output):
+    output.write("SET LOGGED")
+
+
+AlterTableTypePrinter.AT_SetStatistics = AT_SetStatistics
+AlterTableTypePrinter.AT_SetUnLogged = AT_SetUnLogged
+AlterTableTypePrinter.AT_SetLogged = AT_SetLogged
