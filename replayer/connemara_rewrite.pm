@@ -75,6 +75,10 @@ sub fix_schema_ddl
     {
         print "Skipping <$ddl> we don't care about validation of CHECK constraints\n";
     }
+    elsif ($ddl =~ /^\s*alter\s*table\s*\S*.*\bOWNER\s+TO/i)
+    {
+        print "Skipping <$ddl> we don't care about ownership\n";
+    }
     elsif ($ddl =~ /^\s*(CREATE|ALTER|DROP)(\s+OR\s+REPLACE)?\s+FUNCTION\s+/i)
     {
         print "Skipping <$ddl> we don't care about functions. They'll need a rewrite anyway\n";
@@ -101,6 +105,12 @@ sub fix_schema_ddl
         # Crazy optimistic rewrite
         $fixed_ddl = $ddl;
         $fixed_ddl =~ s/^((?:CREATE|ALTER|DROP)\s+TYPE)\s+(\S+)\.(\S+)/$1 . " " .fix_schema($2,$database) ."." . $3/ie;
+    }
+    elsif ($ddl =~ /^\s*(CREATE|ALTER|DROP)\s+SEQUENCE/i)
+    {
+        # Crazy optimistic rewrite
+        $fixed_ddl = $ddl;
+        $fixed_ddl =~ s/^((?:CREATE|ALTER|DROP)\s+SEQUENCE)\s+(\S+)\.(\S+)/$1 . " " .fix_schema($2,$database) ."." . $3/ie;
     }
     else
     {
