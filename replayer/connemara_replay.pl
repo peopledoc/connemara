@@ -100,22 +100,6 @@ sub get_pk
     return \@result; # Do this by reference, faster
 }
 
-# This function's purpose is to call get_pk if we're in the normal case
-# or return something else in the case of events
-# It's only there for the timescale to PG 12 migration
-sub get_keys
-{
-    my ($db,$schema,$table)=@_;
-    if ($db eq 'audit' and $table eq 'events')
-    {
-        my @result = ("event_id", "created_at");
-        return \@result;
-    }
-    else
-    {
-        return get_pk($db,$schema,$table);
-    }
-}
 
 # And another for unique constraints/indexes
 my %cached_uniques;
@@ -196,7 +180,7 @@ sub get_prep_statement_object
        ( $row->{operation}, $row->{columns});
     my $dest_schema = connemara_rewrite::fix_schema($schema,$db);
     my $lookup_key;
-    my $keys=get_keys($db,$schema,$table);
+    my $keys=get_pk($db,$schema,$table);
     # Update, and insert needs the list of columns: some will not be set (toast for instance), and anyway
     # it's simpler to just ask postgresql to cast the sub-json part as the correct data type
     # But won't do until we are able to propagate DDLs
@@ -460,7 +444,7 @@ sub do_db_change
     if ($row->{operation} ne 'insert')
     {
         # get the PK's list of columns, and find those in the json
-        my $keys=get_keys($database,$schema,$table);
+        my $keys=get_pk($database,$schema,$table);
         # Build an hash from the columnames/columnvalues arrays
         my %record;
 
@@ -951,7 +935,7 @@ while (1)
                     # to speedup things
                     $updated_by_pk++;
                     my @PKvalues;
-                    my $keys=get_keys($row->{database},$row->{schema},$row->{table});
+                    my $keys=get_pk($row->{database},$row->{schema},$row->{table});
                     my %record;
                     my @columnnames;
                     my @columnvalues;

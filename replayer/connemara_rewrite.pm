@@ -41,11 +41,6 @@ sub fix_schema_ddl
     {
         print "Ignoring ddl statement <$ddl>, because of known checksum\n"
     }
-    # Ignore the audit database... TimescaleDB DDL won't work
-    elsif ($database eq 'audit')
-    {
-        print "Ignoring ddl statement from audit: <$ddl>\n";
-    }
     elsif ($ddl =~ /^\s*create temp(orary)? table/i)
     {
         print "Skipping <$ddl>, replicating temp tables make no sense\n";
@@ -133,28 +128,12 @@ sub fix_schema_ddl
 }
 
 # This function rewrites object name in certain cases
-# We use it for objects coming from the audit database, that contains timescaledb objects
 # Takes database/schema/table in input, and returns fixed in output
 # If database is undef in output, the main function will ignore the record
 # You can also, if necessary, modify $row, but this could get ugly
 sub fix_object_dml
 {
     my ($database, $schema, $table, $row) = @_;
-    # Special ugly cases for TimescaleDB. We send it to the master table
-    if ($database eq 'audit')
-    {
-        if ($table =~ /^_hyper_.*chunk$/)
-        {
-            $table = 'events';
-            $schema = 'public';
-        }
-        elsif ($schema = '_timescaledb_catalog')
-        {
-            # These are timescaledb's catalog updates. we don't care.
-            # Let timescaledb do its own maintenance
-            return (undef, undef, undef);
-        }
-    }
     return ($database, $schema, $table);
 };
 
