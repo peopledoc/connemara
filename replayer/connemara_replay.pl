@@ -299,7 +299,7 @@ with not_indexed_constraints as (
                ),
      unnested_constraints as (
         select conname, tablename, unnest.* FROM not_indexed_constraints,unnest(conkey) with ordinality)
-SELECT 'CREATE INDEX CONCURRENTLY ' || conname || ' ON ' || tablename::text || '(' ||
+SELECT 'CREATE INDEX CONCURRENTLY ON ' || tablename::text || '(' ||
        string_agg(quote_ident(attname::text), ',' order by ordinality) || ')'
 from unnested_constraints
 join  pg_attribute on (unnested_constraints.tablename=pg_attribute.attrelid

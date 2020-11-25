@@ -1,13 +1,17 @@
+connemara (1.0.2) UNRELEASED; urgency=medium
+
+  * Small fixes on the replayer side
+
+ -- MAINTAINER <ronan.dunklau@people-doc.com>  Wed, 25 Nov 2020 17:15:29 +0100
+
 connemara (1.0.1) UNRELEASED; urgency=medium
 
   * Update to pglast
 
  -- MAINTAINER <ronan.dunklau@people-doc.com>  Mon, 17 Aug 2020 09:23:50 +0200
 
-
 connemara (1.0.0) UNRELEASED; urgency=medium
 
   * Initial package
 
  -- MAINTAINER <ronan.dunklau@people-doc.com>  Tue, 16 Jun 2020 09:59:32 +0200
-
