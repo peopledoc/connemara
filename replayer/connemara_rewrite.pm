@@ -94,6 +94,8 @@ sub fix_schema_ddl
         # Crazy optimistic rewrite
         $fixed_ddl = $ddl;
         $fixed_ddl =~ s/^((?:CREATE|ALTER|DROP)\s+TABLE)\s+(\S+)\.(\S+)/$1 . " " .fix_schema($2,$database) ."." . $3/ie;
+        # Let's also try to rewrite the schema if it's a set schema
+        $fixed_ddl =~ s/(set\s+schema\s+)(\S+)/$1 . fix_schema($2,$database)/ie;
     }
     elsif ($ddl =~ /^\s*(CREATE|ALTER|DROP)\s+TYPE/i)
     {
