@@ -39,6 +39,7 @@ def object_creation(statement):
             'DropStmt',
             'DoStmt',
             'TruncateStmt',
+            'CreateCastStmt',
             'AlterEnumStmt',
             'GrantRoleStmt',
             'GrantStmt'):
