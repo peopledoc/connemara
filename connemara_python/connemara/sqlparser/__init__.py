@@ -196,6 +196,7 @@ class SchemaRestorer():
                                       'AlterDefaultPrivilegesStmt',
                                       'CreatePolicyStmt',
                                       'CommentStmt',
+                                      'CreateCastStmt',
                                       'AlterOwnerStmt'):
 
                 continue
