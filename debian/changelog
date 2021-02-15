@@ -1,3 +1,9 @@
+connemara (1.0.4) UNRELEASED; urgency=medium
+
+  * Add connemara_fixer
+
+ -- MAINTAINER <ronan.dunklau@people-doc.com>  Mon, 15 Feb 2021 10:51:09 +0100
+
 connemara (1.0.3) UNRELEASED; urgency=medium
 
   * Ignore CastStmt
