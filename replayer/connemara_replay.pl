@@ -859,7 +859,7 @@ if ($db_list)
 {
     # build sthing like
     # database not in ('toto','tutu') or (database,source_slotname) not in ( ('tata','foo'), ('tete', 'bar'));
-    $db_list_where_clause="AND ( database not in ($db_list) or (database,source_slotname) in ($in_list) )";
+    $db_list_where_clause="WHERE ( database not in ($db_list) or (database,source_slotname) in ($in_list) )";
 }
 
 while (1)
@@ -867,15 +867,19 @@ while (1)
     # Let's fetch a new batch
     my $updated = 0;
     my $updated_by_pk = 0;
-    my $last_replayed;
+    my $last_replayed; # Timestamp of last replayed record (just for display)
+    my $last_committed_epoch; # Timestamp of last commited record in seconds
+    my $last_replayed_epoch; # Timestamp of last replayed record in seconds
+
 
 
     $dbh_events->begin_work();
     # This may be a lot of data. Fetch this 1000 per 1000 with a cursor
-    # Don't do batches of more than 30s worth of transactions.
+    # Take all that we can. We'll commit every 30s worth of data
     # That makes it easier for vacuum to cleanup
     my $read_query = "SELECT ctid,
                              insert_timestamp,
+                             extract(epoch from insert_timestamp) as epoch,
                              lsn_start,
                              database,
                              source_slotname,
@@ -887,7 +891,6 @@ while (1)
                              payload->'columnnames' as columnnames,
                              payload->'columnvalues' as columnvalues
                       FROM replication.raw_messages
-                      WHERE insert_timestamp < (SELECT min(insert_timestamp) + '30s'::interval FROM replication.raw_messages)
                       $db_list_where_clause
                       ORDER BY insert_timestamp,lsn_start";
     $dbh_events->do("DECLARE curs CURSOR FOR $read_query");
@@ -1005,6 +1008,18 @@ while (1)
                     $queues[$thread_number]->enqueue($row->{ctid});
                 }
                 $last_replayed=$row->{insert_timestamp};
+                $last_replayed_epoch=$row->{epoch};
+                if (not defined $last_committed_epoch)
+                {
+                    # Only occurs on first iteration
+                    $last_committed_epoch = $last_replayed_epoch;
+                }
+                # Ok, should we commit ? Do this if more than 30s
+                if ($last_replayed_epoch - $last_committed_epoch > 30)
+                {
+                    commit_sessions($queue_message_ok, $last_replayed);
+                    $last_committed_epoch = $last_replayed_epoch;
+                }
            }
        }
     }
@@ -1019,6 +1034,9 @@ while (1)
         next;
     }
     commit_sessions($queue_message_ok, $last_replayed);
+    undef $last_committed_epoch;
+    undef $last_replayed_epoch;
+    undef $last_replayed;
 
     $dbh_events->commit(); # Just to release the snapshot for next cursor
     # Log updated stats if in debug
