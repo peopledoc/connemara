@@ -867,9 +867,11 @@ while (1)
     # Let's fetch a new batch
     my $updated = 0;
     my $updated_by_pk = 0;
+    # This uses the insert timestamp, for display purpose
     my $last_replayed; # Timestamp of last replayed record (just for display)
+    # Those use the xid timestamp to determine when to commit
     my $last_committed_epoch; # Timestamp of last commited record in seconds
-    my $last_replayed_epoch; # Timestamp of last replayed record in seconds
+    my $current_replayed_epoch; # Timestamp of current record in seconds
 
 
 
@@ -879,7 +881,7 @@ while (1)
     # That makes it easier for vacuum to cleanup
     my $read_query = "SELECT ctid,
                              insert_timestamp,
-                             extract(epoch from insert_timestamp) as epoch,
+                             extract(epoch from xid_timestamp) as epoch,
                              lsn_start,
                              database,
                              source_slotname,
@@ -905,6 +907,19 @@ while (1)
         last if 0 == $sth_events->rows;
         while (my $row = $sth_events->fetchrow_hashref)
         {
+            $current_replayed_epoch=$row->{epoch};
+            if (not defined $last_committed_epoch)
+            {
+                # Only occurs on first iteration
+                $last_committed_epoch = $current_replayed_epoch;
+            }
+            # Ok, should we commit ? Do this if more than 30s
+            if ($current_replayed_epoch - $last_committed_epoch > 30)
+            {
+                commit_sessions($queue_message_ok, $last_replayed);
+                $last_committed_epoch = $current_replayed_epoch;
+            }
+            # Now that this is out of the way:
             # We have two cases here. Most of the time we'll get "normal" dmls, which we know how to replay simply
             # But we may also get DDLs. Those are captured in the sources database with an event trigger, which inserts the
             # source query in public.sql_ddl_statements. When we meet one of those, we
@@ -1008,18 +1023,6 @@ while (1)
                     $queues[$thread_number]->enqueue($row->{ctid});
                 }
                 $last_replayed=$row->{insert_timestamp};
-                $last_replayed_epoch=$row->{epoch};
-                if (not defined $last_committed_epoch)
-                {
-                    # Only occurs on first iteration
-                    $last_committed_epoch = $last_replayed_epoch;
-                }
-                # Ok, should we commit ? Do this if more than 30s
-                if ($last_replayed_epoch - $last_committed_epoch > 30)
-                {
-                    commit_sessions($queue_message_ok, $last_replayed);
-                    $last_committed_epoch = $last_replayed_epoch;
-                }
            }
        }
     }
@@ -1035,7 +1038,7 @@ while (1)
     }
     commit_sessions($queue_message_ok, $last_replayed);
     undef $last_committed_epoch;
-    undef $last_replayed_epoch;
+    undef $current_replayed_epoch;
     undef $last_replayed;
 
     $dbh_events->commit(); # Just to release the snapshot for next cursor
