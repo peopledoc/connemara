@@ -2,12 +2,12 @@ Source: connemara
 Section: database
 Priority: optional
 Maintainer: rdunklau, <ronan.dunklau@people-doc.com>
-Build-Depends: python3, cmake, python3-psycopg2, python3-pglast (>= 2.0.1), pkgconf, libpcre2-dev, libpcre++-dev, libpq-dev, postgresql-server-dev-all, libcunit1-dev, dh-python
+Build-Depends: python3, cmake, python3-psycopg2, python3-pglast (>= 2.0.1), pkgconf, libpcre2-dev, libpcre++-dev, libpq-dev, postgresql-server-dev-all, libcunit1-dev, dh-python, debhelper, python3-setuptools
 Standards-Version: 3.9.2
 
 Package: connemara
 Architecture: all
 Section: database
-Depends: ${python3:Depends}, ${misc:Depends}, python3-pglast (>= 2.0.1), python3-psycopg2, libpcre++0v5
+Depends: ${python3:Depends}, ${misc:Depends}, python3-pglast (>= 2.0.1), python3-psycopg2, libpcre++0v5, libcurses-ui-perl
 Description: Connemara replication tool for PostgreSQL
 Replaces: python3-connemara-basebackup, connemara-replication
