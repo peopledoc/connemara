@@ -1,3 +1,9 @@
+connemara (1.0.5) UNRELEASED; urgency=medium
+
+  * Slurp all records at once
+
+ -- MAINTAINER <ronan.dunklau@people-doc.com>  Wed, 17 Mar 2021 10:04:29 +0100
+
 connemara (1.0.4) UNRELEASED; urgency=medium
 
   * Add connemara_fixer
