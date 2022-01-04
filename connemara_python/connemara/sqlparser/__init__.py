@@ -7,6 +7,7 @@ import logging
 from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
+import uuid
 
 import psycopg2
 
@@ -165,13 +166,16 @@ class SchemaRestorer():
         for schema in missing_schemas:
             cursor.execute('CREATE SCHEMA IF NOT EXISTS %s;' % schema)
 
-    def restore_schema(self, blacklist_objects=None):
+    def restore_schema(self, blacklist_objects=None, failable_objects=None):
         """
         Restore the DDLScript in the target DB.
 
         Arguments:
           blacklist_objects (list): a list of fully qualified object names
             that we shouldn't restore.
+
+          failable_objects (list): a list of objects for which we ignore failures
+            during restoration.
 
         Returns:
           list: a list of statements to execute after data has been restored.
@@ -185,6 +189,7 @@ class SchemaRestorer():
         cursor.execute("BEGIN")
         self._create_missing_schemas(cursor)
         blacklist_objects = blacklist_objects or []
+        failable_objects = failable_objects or []
         # Skip certain kind of statements: we are not interested in non-unique
         # indexes, nor in triggers
         post_data = []
@@ -233,12 +238,26 @@ class SchemaRestorer():
                     continue
             str_statement = IndentedStream(expression_level=1)(statement)
 
-            if object_creation(statement) in blacklist_objects:
+            obj_creation = object_creation(statement)
+            if obj_creation in blacklist_objects:
                 logging.debug("Ignore %s" % str_statement)
 
                 continue
+
+            savepoint_name = None
+            if obj_creation in failable_objects:
+                savepoint_name = uuid.uuid4()
+                cursor.execute("SAVEPOINT %s", savepoint_name)
+
             logging.debug("Restoring %s" % str_statement)
-            cursor.execute(str_statement)
+            try:
+                cursor.execute(str_statement)
+            except psycopg2.Error:
+                if savepoint_name:
+                    cursor.execute("ROLLBACK TO SAVEPOINT %s", savepoint_name)
+                else:
+                    raise
+
         cursor.execute("COMMIT")
 
         return post_data

@@ -182,7 +182,9 @@ if __name__ == '__main__':
     blacklist_objects = []
     if args.is_timescaledb:
         blacklist_objects.append((ObjectType.OBJECT_EXTENSION, "timescaledb"))
-    post_data = restorer.restore_schema(blacklist_objects=blacklist_objects)
+    post_data = restorer.restore_schema(
+        blacklist_objects=blacklist_objects, failable_objects=all_objects
+    )
     # Now, let's copy the table contents.
     restore_tables(args.source, args.target, table_mapping,
                    snapshot_name=dumper.snapshot_name,
