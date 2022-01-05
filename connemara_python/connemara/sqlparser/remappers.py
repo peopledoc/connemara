@@ -364,8 +364,9 @@ def remap_createfunction(node, schema_map, ignore_objects, default_schema,
         remap_one_node(param, schema_map, ignore_objects, default_schema,
                    only_objects)
 
-    remap_one_node(node.returnType, schema_map, ignore_objects, default_schema,
-               only_objects)
+    if node.returnType:
+        remap_one_node(node.returnType, schema_map, ignore_objects, default_schema,
+                   only_objects)
 
     if node.language == 'sql':
         for option in node.options:
