@@ -27,7 +27,7 @@ add_test(NAME connemera_basic_test COMMAND connemara_basic_test)
 
 
 SET(MAJOR_VERSION 1)
-SET(MINOR_VERSION 0)
+SET(MINOR_VERSION 1)
 SET(PATCH_VERSION 0)
 
 add_definitions("-DCONNEMARA_VERSION=\"${MAJOR_VERSION}.${MINOR_VERSION}.${PATCH_VERSION}\"")
