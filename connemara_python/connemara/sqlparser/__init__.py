@@ -230,12 +230,19 @@ class SchemaRestorer():
                     post_data.append(statement)
 
                     continue
-                # Just ignore ALTER TABLE .. OWNER TO
 
+                # Just ignore ALTER TABLE .. OWNER TO
                 if any(cmd.subtype.value == AlterTableType.AT_ChangeOwner
                         for cmd in statement.cmds):
 
                     continue
+
+                # Just ignore ALTER TABLE .. ROW LEVEL SECURITY 56
+                if any(cmd.subtype.value == AlterTableType.AT_EnableRowSecurity
+                        for cmd in statement.cmds):
+
+                    continue
+
             str_statement = IndentedStream(expression_level=1)(statement)
 
             obj_creation_tuple = object_creation(statement)
