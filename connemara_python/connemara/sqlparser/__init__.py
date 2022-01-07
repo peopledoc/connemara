@@ -238,7 +238,11 @@ class SchemaRestorer():
                     continue
             str_statement = IndentedStream(expression_level=1)(statement)
 
-            obj_creation = object_creation(statement)
+            obj_creation_tuple = object_creation(statement)
+            obj_creation = None
+            if obj_creation_tuple:
+                obj_creation = obj_creation_tuple[1]
+
             if obj_creation in blacklist_objects:
                 logging.debug("Ignore %s" % str_statement)
 
@@ -246,15 +250,16 @@ class SchemaRestorer():
 
             savepoint_name = None
             if obj_creation in failable_objects:
-                savepoint_name = uuid.uuid4()
-                cursor.execute("SAVEPOINT %s", savepoint_name)
+                savepoint_name = 'svpt_' + uuid.uuid4().hex
+                cursor.execute("SAVEPOINT %s" % savepoint_name)
 
             logging.debug("Restoring %s" % str_statement)
             try:
                 cursor.execute(str_statement)
             except psycopg2.Error:
                 if savepoint_name:
-                    cursor.execute("ROLLBACK TO SAVEPOINT %s", savepoint_name)
+                    logging.debug("Rollback to savepoint for %s", str_statement)
+                    cursor.execute("ROLLBACK TO SAVEPOINT %s" % savepoint_name)
                 else:
                     raise
 
