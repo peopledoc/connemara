@@ -1,5 +1,6 @@
 #!env python3
 import argparse
+import asyncio
 import itertools
 import json
 import logging
@@ -193,12 +194,7 @@ if __name__ == '__main__':
     # Finally, apply «the rest»
     conn = psycopg2.connect(target_dsn)
     cur = conn.cursor()
-    for stmt in post_data:
-        # The statements have already been remapped. However, we need to
-        # filter them.
-        if should_apply_post_data_stmt(stmt):
-            cur.execute(IndentedStream(expression_level=1)(stmt))
-    logger.info("Everything restored")
+
     if slot_name is None:
         logger.info("No slot name given, don't create a replication_origin")
     else:
@@ -207,4 +203,20 @@ if __name__ == '__main__':
         cur.execute("SELECT pg_replication_origin_advance(%s, %s)",
                     (slot_name, dumper.consistent_point))
     cur.execute("COMMIT")
+    logger.info("Restoring indices")
+
+    loop = asyncio.get_event_loop()
+    for stmt in post_data:
+        loop.run_in_executor(None, create_index, target_dsn, stmt)
+
+    logger.info("Everything restored")
     logger.info("Finished !")
+
+
+def create_index(target_dsn, stmt):
+    conn = psycopg2.connect(target_dsn)
+    cur = conn.cursor()
+    # The statements have already been remapped. However, we need to
+    # filter them.
+    if should_apply_post_data_stmt(stmt):
+        cur.execute(IndentedStream(expression_level=1)(stmt))
