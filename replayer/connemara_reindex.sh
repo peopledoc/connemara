@@ -1,5 +1,6 @@
 #!/bin/bash
 
+JOB=16
 PSQL='psql -X'
 DSN=$1
 if [ "$DSN" == "" ] ; then
@@ -13,12 +14,18 @@ fi
 QUERY="SELECT 'DROP INDEX CONCURRENTLY ' || indexrelid::regclass \
   FROM pg_index \
  WHERE NOT indisvalid \
-   AND NOT EXISTS (SELECT 1 FROM pg_locks WHERE relation=pg_index.indexrelid)"
+   AND NOT EXISTS (SELECT 1 FROM pg_locks WHERE relation=pg_index.indexrelid) \
+ORDER BY random()"
 
-$PSQL "$DSN" -Atc "$QUERY" | xargs -I {} sh -c "echo '{}'; echo 'SET ROLE postgres; {};' | $PSQL '$DSN' -At"
+echo 'Drop INVALID indexes'
+$PSQL "$DSN" -Atc "$QUERY" | xargs -I{} -P$JOB sh -c "echo '{}'; echo 'SET ROLE postgres; {};' | $PSQL '$DSN' -At"
 
 
 ### Create missing index on FK ###
+
+# Without CONCURENTLY, with timeout = 0
+# Force rebuild in //
+# May crash connemara replication but faster
 
 # We need to limit ourselves to indnkeyatts because the keys after that aren't indexed
 # then to array_upper(conkey,1) because our index must START exactly the same as the conkey
@@ -40,11 +47,13 @@ QUERY="WITH not_indexed_constraints AS ( \
   SELECT conname, tablename, unnest.* \
     FROM not_indexed_constraints,unnest(conkey) with ordinality \
  ) \
-SELECT 'CREATE INDEX CONCURRENTLY ON ' || tablename::text || '(' || \
+SELECT 'CREATE INDEX ON ' || tablename::text || '(' || \
        string_agg(quote_ident(attname::text), ',' order by ordinality) || ')' \
   FROM unnested_constraints \
   JOIN pg_attribute ON unnested_constraints.tablename=pg_attribute.attrelid \
                    AND pg_attribute.attnum=unnested_constraints.unnest \
-GROUP BY tablename, conname"
+GROUP BY tablename, conname \
+ORDER BY tablename, random()"
 
-$PSQL "$DSN" -Atc "$QUERY" | xargs -I {} sh -c "echo '{}'; echo 'SET ROLE postgres; {};' | $PSQL '$DSN' -At"
+echo 'Create missing FOREIGN KEY indexes'
+$PSQL "$DSN" -Atc "$QUERY" | xargs -I{} -P$JOB sh -c "echo '{}'; echo 'SET ROLE postgres; SET statement_timeout TO 0; SET lock_timeout TO 0; {};' | $PSQL '$DSN' -At"
