@@ -259,65 +259,6 @@ sub get_prep_statement_object
     return $sth;
 }
 
-# This is called when idling. We create missing indexes, in case we got a FK creation for instance
-sub create_missing_indexes
-{
-    my ($dbh)=@_;
-    # We cannot be in a transaction for this
-    $dbh->commit();
-    my $query=q{
-    select 'DROP INDEX CONCURRENTLY ' || indexrelid::regclass from pg_index
-    where not indisvalid
-    and not exists
-        (select 1 from pg_locks where relation=pg_index.indexrelid)
-    };
-    my $records_to_drop=$dbh->selectall_arrayref($query, {pg_direct => 1});
-    foreach my $record(@$records_to_drop)
-    {
-        my $index=$record->[0];
-        print "Dropping this invalid index: $index\n";
-        $dbh->do($index);
-    }
-
-    $query=q{
-with not_indexed_constraints as (
-        select conname, conrelid::regclass as tablename, conkey
-        from pg_constraint
-        where contype = 'f'
-          and not exists (
-                 select 1
-                 from pg_index
-                 where indrelid=conrelid
-                 -- We need to limit ourselves to indnkeyatts because the keys after that aren't indexed
-                 -- then to array_upper(conkey,1) because our index must START exactly the same as the conkey
-                 -- the slice on indkey is offset by -1 because indkey is a int2vector, those start at 0
-                 -- As the key order is of no importance, the arrays just need to be included in each other
-                 -- (equals in the ensemblist sense)
-                   and ((indkey::int4[])[0:indnkeyatts-1])[1:array_upper(conkey,1)]@>conkey::int4[]
-                   and ((indkey::int4[])[0:indnkeyatts-1])[1:array_upper(conkey,1)]<@conkey::int4[]
-                        )
-               ),
-     unnested_constraints as (
-        select conname, tablename, unnest.* FROM not_indexed_constraints,unnest(conkey) with ordinality)
-SELECT 'CREATE INDEX CONCURRENTLY ON ' || tablename::text || '(' ||
-       string_agg(quote_ident(attname::text), ',' order by ordinality) || ')'
-from unnested_constraints
-join  pg_attribute on (unnested_constraints.tablename=pg_attribute.attrelid
-                   and pg_attribute.attnum=unnested_constraints.unnest)
-group by tablename,conname
-    };
-    # This query is pg_direct, because it seems DBD::Pg is lead
-    # astray by the array slice in the query
-    my $records_to_create=$dbh->selectall_arrayref($query, {pg_direct => 1});
-    foreach my $record(@$records_to_create)
-    {
-        my $index=$record->[0];
-        print "Creating this index: $index\n";
-        $dbh->do($index);
-    }
-    $dbh->begin_work();
-}
-
 # This is a DDL: the table is sql_ddl_statements in the public schema
 # Let's try to do the DDL
 # We have a special transaction semantics here, as some DDL are not transactional:
@@ -595,7 +536,6 @@ WHERE ctid IN ("
 # Or "SYNC", meaning we will commit (to which we respond we are ok)
 # Or "COMMIT", to commit simultaneously on all threads
 # Or "DISCARD", to end all that has been done to this point and cleanup all caches (after a DDL has been replayed)
-# Or "CREATE MISSING INDEXES", which will be sent to the async worker thread to build missing indexes
 sub new_worker
 {
     my ($connection_string,$queue,$queue_message_ok)=@_;
@@ -651,11 +591,6 @@ sub new_worker
             $dbh_write->begin_work();
             # Confirm
             $queue_message_ok->enqueue('DISCARD OK');
-        }
-        elsif ($msg eq 'CREATE MISSING INDEXES')
-        {
-            # This session will create missing indexes
-            create_missing_indexes($dbh_write);
         }
         elsif ($msg eq 'SWITCH LOGGING')
         {
@@ -1032,7 +967,6 @@ while (1)
     {
         logmessage("Nothing to do\n");
         $dbh_events->commit(); # Just to release the snapshot for next cursor iteration
-        $queue_async->enqueue("CREATE MISSING INDEXES"); # Ask to the worker thread to have a look to missing indexes, best moment, we're idle
         sleep(5);
         next;
     }

@@ -197,6 +197,7 @@ if __name__ == '__main__':
         # The statements have already been remapped. However, we need to
         # filter them.
         if should_apply_post_data_stmt(stmt):
+            logger.debug(IndentedStream(expression_level=1)(stmt))
             cur.execute(IndentedStream(expression_level=1)(stmt))
     logger.info("Everything restored")
     if slot_name is None:
