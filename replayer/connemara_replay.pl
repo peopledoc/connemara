@@ -837,7 +837,7 @@ while (1)
     while (1)
     {
         my @ctids;
-        my $sth_events = $dbh_events->prepare("FETCH 1000 FROM curs");
+        my $sth_events = $dbh_events->prepare("FETCH 10000 FROM curs");
         $sth_events->execute();
         last if 0 == $sth_events->rows;
         while (my $row = $sth_events->fetchrow_hashref)
@@ -958,8 +958,10 @@ while (1)
                     $queues[$thread_number]->enqueue($row->{ctid});
                 }
                 $last_replayed=$row->{insert_timestamp};
-           }
-       }
+            }
+        }
+        # This commit should be on time (30s)
+        commit_sessions($queue_message_ok, $last_replayed);
     }
    # End of this batch, no more record to fetch
     $dbh_events->do("CLOSE curs");
@@ -974,6 +976,7 @@ while (1)
     undef $last_committed_epoch;
     undef $current_replayed_epoch;
     undef $last_replayed;
+    sleep(15);
 
     $dbh_events->commit(); # Just to release the snapshot for next cursor
     # Log updated stats if in debug
