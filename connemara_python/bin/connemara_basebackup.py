@@ -187,6 +187,7 @@ if __name__ == '__main__':
     )
     # Now, let's copy the table contents.
     restore_tables(args.source, args.target, table_mapping,
+                   njobs=8,
                    snapshot_name=dumper.snapshot_name,
                    include_inherited=args.is_timescaledb)
     logger.info("Table content restored, now onto post data objects")
