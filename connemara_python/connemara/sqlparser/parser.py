@@ -107,8 +107,10 @@ class Parser():
                     try:
                         prettify(stmt, expression_level=1)
                     except Exception as e:
-                        raise ValueError("Error while parsing statement '%s'" %
-                                stmt) from e
+                        logging.getLogger().debug("Error while parsing statement")
+                        logging.getLogger().debug(stmt)
+                        logging.getLogger().debug(e)
+                        continue
 
             parse_stmt = Node(parse_sql(stmt)[0]).stmt
             if comments:
