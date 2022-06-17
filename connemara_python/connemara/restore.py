@@ -7,12 +7,15 @@ import logging
 import os
 
 def copy_table(source_dsn, target_dsn, source_table, target_table,
-               snapshot_name=None, include_inherited=False):
+               snapshot_name=None, include_inherited=False,
+               nb=0, part=1):
     copy_script = "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;"
     if snapshot_name is not None:
         copy_script += "SET TRANSACTION SNAPSHOT '%s';" % snapshot_name
     if include_inherited:
         copy_script += "COPY (SELECT * FROM %s) TO STDOUT;" % source_table
+    if part > 1:
+        copy_script += "COPY (SELECT * FROM %s WHERE (ctid::text::point)[0]::int % %s = %s) TO STDOUT;" % (source_table, part, nb)
     else:
         copy_script += "COPY %s TO STDOUT;" % source_table
     logger = multiprocessing.get_logger()
@@ -44,6 +47,20 @@ def restore_tables(source_dsn, target_dsn, table_mapping, njobs=4,
     pool = multiprocessing.Pool(njobs)
     for source_table, target_table in table_mapping.items():
         pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
-                     target_table, snapshot_name, include_inherited))
+                     target_table, snapshot_name, include_inherited, 0, 8))
+        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
+                     target_table, snapshot_name, include_inherited, 1, 8))
+        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
+                     target_table, snapshot_name, include_inherited, 2, 8))
+        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
+                     target_table, snapshot_name, include_inherited, 3, 8))
+        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
+                     target_table, snapshot_name, include_inherited, 4, 8))
+        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
+                     target_table, snapshot_name, include_inherited, 5, 8))
+        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
+                     target_table, snapshot_name, include_inherited, 6, 8))
+        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
+                     target_table, snapshot_name, include_inherited, 7, 8))
     pool.close()
     pool.join()
