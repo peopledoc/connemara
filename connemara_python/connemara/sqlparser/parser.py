@@ -7,6 +7,7 @@ and preserves comments, and ignores psql commands instead of erroring out.
 """
 import re
 import warnings
+import logging
 from pglast import parse_sql, Node, prettify
 
 

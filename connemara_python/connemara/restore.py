@@ -9,16 +9,16 @@ import os
 def copy_table(source_dsn, target_dsn, source_table, target_table,
                snapshot_name=None, include_inherited=False,
                nb=0, part=1):
+    logger = multiprocessing.get_logger()
     copy_script = "BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;"
     if snapshot_name is not None:
         copy_script += "SET TRANSACTION SNAPSHOT '%s';" % snapshot_name
     if include_inherited:
         copy_script += "COPY (SELECT * FROM %s) TO STDOUT;" % source_table
     if part > 1:
-        copy_script += "COPY (SELECT * FROM %s WHERE (ctid::text::point)[0]::int % %s = %s) TO STDOUT;" % (source_table, part, nb)
+        copy_script += "COPY (SELECT * FROM {0} WHERE (ctid::text::point)[0]::int % {1} = {2}) TO STDOUT;".format(source_table, part, nb)
     else:
         copy_script += "COPY %s TO STDOUT;" % source_table
-    logger = multiprocessing.get_logger()
     try:
         pout = subprocess.Popen(["psql", "-d", source_dsn, "-X",
                                 "-c", copy_script],
@@ -39,28 +39,15 @@ def copy_table(source_dsn, target_dsn, source_table, target_table,
     except:
         logger.info("Error > %s" % sys.exc_info()[0])
 
-
-
 def restore_tables(source_dsn, target_dsn, table_mapping, njobs=4,
                    snapshot_name=None, include_inherited=False):
+    logging.getLogger().info("restore_tables start")
     multiprocessing.log_to_stderr()
     pool = multiprocessing.Pool(njobs)
     for source_table, target_table in table_mapping.items():
-        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
-                     target_table, snapshot_name, include_inherited, 0, 8))
-        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
-                     target_table, snapshot_name, include_inherited, 1, 8))
-        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
-                     target_table, snapshot_name, include_inherited, 2, 8))
-        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
-                     target_table, snapshot_name, include_inherited, 3, 8))
-        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
-                     target_table, snapshot_name, include_inherited, 4, 8))
-        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
-                     target_table, snapshot_name, include_inherited, 5, 8))
-        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
-                     target_table, snapshot_name, include_inherited, 6, 8))
-        pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
-                     target_table, snapshot_name, include_inherited, 7, 8))
+        for i in range (0, njobs):
+            pool.apply_async(copy_table, (source_dsn, target_dsn, source_table,
+                             target_table, snapshot_name, include_inherited, i, njobs))
     pool.close()
     pool.join()
+    logging.getLogger().info("restore_tables end")

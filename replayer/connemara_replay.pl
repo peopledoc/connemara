@@ -417,6 +417,7 @@ sub do_db_change
         my $affected_rows = $prepstatement->execute(@args);
         if ($affected_rows != 1)
         {
+            print("Please, purge queue for database '" . $row->{database} . "'.");
             die "Should have affected one row, but the statement affected $affected_rows";
         }
     } catch {

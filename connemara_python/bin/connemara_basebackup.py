@@ -14,6 +14,7 @@ from psycopg2.extensions import parse_dsn
 from connemara.sqlparser.remappers import remap_node, name_to_fqname, object_creation
 from connemara.sqlparser import SchemaRestorer
 from connemara.restore import restore_tables
+from connemara.post_data import post_data_exec
 from connemara.schema_dump import SchemaDumper
 
 
@@ -93,30 +94,6 @@ def load_conf(args):
     return conf
 
 
-def should_apply_post_data_stmt(stmt):
-    if stmt.node_tag == 'AlterTableStmt':
-        # In case of multiple commands, be safe and apply it
-        if len(stmt.cmds) != 1:
-            return True
-        cmd = stmt.cmds[0]
-        # Only keep some types of constraints
-        if cmd.subtype == AlterTableType.AT_AddConstraint:
-            kept_consttypes = (
-                    ConstrType.CONSTR_PRIMARY,
-                    ConstrType.CONSTR_UNIQUE,
-                    ConstrType.CONSTR_FOREIGN)
-            return getattr(cmd, 'def').contype.value in kept_consttypes
-        if cmd.subtype == AlterTableType.AT_ClusterOn:
-            return False
-        return True
-    if stmt.node_tag == 'IndexStmt':
-        if stmt.unique:
-            return True
-        return False
-    # When in doubt, keep it
-    return True
-
-
 if __name__ == '__main__':
     args = argparser().parse_args()
     logger = logger_setup(logging.DEBUG if args.debug else logging.WARNING)
@@ -138,7 +115,9 @@ if __name__ == '__main__':
     ignore_whole_schemas = conf.get('ignored_schemas', [])
     ignore_whole_schemas.append('_timescaledb_internal')
     dumper.create_repl_slot()
+    logger.debug("dumper start")
     ddlscript = dumper.dump(ignored_schemas=ignore_whole_schemas)
+    logger.debug("dumper end")
 
     dbname = parse_dsn(source_dsn)['dbname']
     schema_map = {'public': '%s_public' % dbname}
@@ -191,15 +170,11 @@ if __name__ == '__main__':
                    snapshot_name=dumper.snapshot_name,
                    include_inherited=args.is_timescaledb)
     logger.info("Table content restored, now onto post data objects")
+
     # Finally, apply «the rest»
     conn = psycopg2.connect(target_dsn)
     cur = conn.cursor()
-    for stmt in post_data:
-        # The statements have already been remapped. However, we need to
-        # filter them.
-        if should_apply_post_data_stmt(stmt):
-            logger.debug(IndentedStream(expression_level=1)(stmt))
-            cur.execute(IndentedStream(expression_level=1)(stmt))
+    post_data_exec(target_dsn, post_data, njobs=4)
     logger.info("Everything restored")
     if slot_name is None:
         logger.info("No slot name given, don't create a replication_origin")
