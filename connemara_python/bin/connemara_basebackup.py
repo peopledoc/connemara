@@ -156,6 +156,7 @@ if __name__ == '__main__':
         if statement.node_tag == 'CreateStmt':
             table_mapping[old_table_name] = name_to_fqname(statement.relation)
 
+    # Restore schema
     ddlscript.statements = filtered_statements
     restorer = SchemaRestorer(target_dsn, ddlscript, schema_map)
     blacklist_objects = []
@@ -164,6 +165,7 @@ if __name__ == '__main__':
     post_data = restorer.restore_schema(
         blacklist_objects=blacklist_objects, failable_objects=all_objects
     )
+
     # Now, let's copy the table contents.
     restore_tables(args.source, args.target, table_mapping,
                    njobs=8,
@@ -172,10 +174,12 @@ if __name__ == '__main__':
     logger.info("Table content restored, now onto post data objects")
 
     # Finally, apply «the rest»
+    post_data_exec(target_dsn, post_data, njobs=8)
+    logger.info("Everything restored")
+
+    # Last, create replication origin
     conn = psycopg2.connect(target_dsn)
     cur = conn.cursor()
-    post_data_exec(target_dsn, post_data, njobs=4)
-    logger.info("Everything restored")
     if slot_name is None:
         logger.info("No slot name given, don't create a replication_origin")
     else:

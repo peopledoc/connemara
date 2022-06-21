@@ -108,6 +108,8 @@ class Parser():
                     try:
                         prettify(stmt, expression_level=1)
                     except Exception as e:
+# We should raise Error, but pglast don't know about REPLICA
+# And we are not able to fix and rebuild pglast package
                         logging.getLogger().debug("Error while parsing statement")
                         logging.getLogger().debug(stmt)
                         logging.getLogger().debug(e)
