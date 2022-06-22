@@ -44,7 +44,7 @@ def post_data_task(target_dsn, stmt):
             os.system('kill -9 {0}'.format(os.getppid()))
             sys.exit(99)
     except:
-        logger.info("Error > %s" % sys.exc_info()[0])
+        logger.exception("Error > %s" % sys.exc_info()[0])
 
 def post_data_exec(target_dsn, statements, njobs=4):
     logging.getLogger().info("post_data_exec start")
