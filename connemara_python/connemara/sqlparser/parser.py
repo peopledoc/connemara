@@ -98,6 +98,7 @@ class Parser():
             generator: Return value yielding fully parsed statements from the
             feed.
         """
+        logger = getLogger()
         while self.finished_statements:
             stmt, comments = self.finished_statements.pop(0)
             if self.validate:
@@ -110,9 +111,9 @@ class Parser():
                     except Exception as e:
 # We should raise Error, but pglast don't know about REPLICA
 # And we are not able to fix and rebuild pglast package
-                        logging.getLogger().debug("Error while parsing statement")
-                        logging.getLogger().debug(stmt)
-                        logging.getLogger().debug(e)
+                        logger.debug("Error while parsing statement")
+                        logger.debug(stmt)
+                        logger.debug(e)
                         continue
 
             parse_stmt = Node(parse_sql(stmt)[0]).stmt
