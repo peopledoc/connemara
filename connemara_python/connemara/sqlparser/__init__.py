@@ -237,8 +237,14 @@ class SchemaRestorer():
 
                     continue
 
-                # Just ignore ALTER TABLE .. ROW LEVEL SECURITY 56
+                # Just ignore ALTER TABLE .. ROW LEVEL SECURITY
                 if any(cmd.subtype.value == AlterTableType.AT_EnableRowSecurity
+                        for cmd in statement.cmds):
+
+                    continue
+
+                # Just ignore ALTER TABLE ..SET  REPLICA FULL
+                if any(cmd.subtype.value == AlterTableType.AT_ReplicaIdentity
                         for cmd in statement.cmds):
 
                     continue

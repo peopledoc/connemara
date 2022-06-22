@@ -7,6 +7,7 @@ and preserves comments, and ignores psql commands instead of erroring out.
 """
 import re
 import warnings
+import logging
 from pglast import parse_sql, Node, prettify
 
 
@@ -97,6 +98,7 @@ class Parser():
             generator: Return value yielding fully parsed statements from the
             feed.
         """
+        logger = getLogger()
         while self.finished_statements:
             stmt, comments = self.finished_statements.pop(0)
             if self.validate:
@@ -107,8 +109,12 @@ class Parser():
                     try:
                         prettify(stmt, expression_level=1)
                     except Exception as e:
-                        raise ValueError("Error while parsing statement '%s'" %
-                                stmt) from e
+# We should raise Error, but pglast don't know about REPLICA
+# And we are not able to fix and rebuild pglast package
+                        logger.debug("Error while parsing statement")
+                        logger.debug(stmt)
+                        logger.debug(e)
+                        continue
 
             parse_stmt = Node(parse_sql(stmt)[0]).stmt
             if comments:
