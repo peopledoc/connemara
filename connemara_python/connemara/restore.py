@@ -51,4 +51,4 @@ def restore_tables(source_dsn, target_dsn, table_mapping, njobs=4,
                              target_table, snapshot_name, include_inherited, i, njobs))
     pool.close()
     pool.join()
-    logger().info("restore_tables end")
+    logger.info("restore_tables end")
