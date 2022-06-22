@@ -37,11 +37,12 @@ def copy_table(source_dsn, target_dsn, source_table, target_table,
             os.system('kill -9 {0}'.format(os.getppid()))
             sys.exit(99)
     except:
-        logger.info("Error > %s" % sys.exc_info()[0])
+        logger.exception("Error > %s" % sys.exc_info()[0])
 
 def restore_tables(source_dsn, target_dsn, table_mapping, njobs=4,
                    snapshot_name=None, include_inherited=False):
-    logging.getLogger().info("restore_tables start")
+    logger = getLogger()
+    logger.info("restore_tables start")
     multiprocessing.log_to_stderr()
     pool = multiprocessing.Pool(njobs)
     for source_table, target_table in table_mapping.items():
@@ -50,4 +51,4 @@ def restore_tables(source_dsn, target_dsn, table_mapping, njobs=4,
                              target_table, snapshot_name, include_inherited, i, njobs))
     pool.close()
     pool.join()
-    logging.getLogger().info("restore_tables end")
+    logger().info("restore_tables end")
