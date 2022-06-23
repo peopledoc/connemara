@@ -98,7 +98,7 @@ class Parser():
             generator: Return value yielding fully parsed statements from the
             feed.
         """
-        logger = getLogger()
+        logger = logging.getLogger()
         while self.finished_statements:
             stmt, comments = self.finished_statements.pop(0)
             if self.validate:

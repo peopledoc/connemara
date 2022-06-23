@@ -41,7 +41,7 @@ def copy_table(source_dsn, target_dsn, source_table, target_table,
 
 def restore_tables(source_dsn, target_dsn, table_mapping, njobs=4,
                    snapshot_name=None, include_inherited=False):
-    logger = getLogger()
+    logger = logging.getLogger()
     logger.info("restore_tables start")
     multiprocessing.log_to_stderr()
     pool = multiprocessing.Pool(njobs)
