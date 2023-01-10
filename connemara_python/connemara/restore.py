@@ -1,6 +1,6 @@
 import psycopg2
 from pglast.enums import ObjectType, AlterTableType
-from pglast.printer import IndentedStream
+from pglast.stream import IndentedStream
 import multiprocessing
 import subprocess
 import logging
