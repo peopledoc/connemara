@@ -6,8 +6,9 @@ Node.
 
 """
 
-from pglast import parse_sql, Node
-from pglast.printer import IndentedStream
+from pglast import parse_sql
+from pglast.ast import Node
+from pglast.stream import IndentedStream
 from pglast.node import Scalar, List
 from pglast.enums import ObjectType
 import pglast.node

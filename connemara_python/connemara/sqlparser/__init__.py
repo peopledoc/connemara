@@ -13,11 +13,9 @@ import psycopg2
 
 from connemara.sqlparser.parser import Parser as SqlParser
 from connemara.sqlparser.remappers import object_creation, remap_node
-from pglast import Node
+from pglast.ast import Node
 from pglast.enums import AlterTableType, ObjectType
-from pglast.printer import IndentedStream
-
-from . import pglast_overrides  # pylint: disable=unused-import
+from pglast.stream import IndentedStream
 
 
 class DDLScript():

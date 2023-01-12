@@ -7,7 +7,7 @@ import os
 import sys
 
 from pglast.enums import ObjectType, AlterTableType, ConstrType
-from pglast.printer import IndentedStream
+from pglast.stream import IndentedStream
 import psycopg2
 from psycopg2.extensions import parse_dsn
 

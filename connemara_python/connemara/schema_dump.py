@@ -11,7 +11,6 @@ from collections import defaultdict
 from connemara.sqlparser import DDLScript
 
 
-
 class SchemaDumper():
 
     def __init__(self, source_dsn, slot_name=None, keepslot=False,
