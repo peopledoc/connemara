@@ -9,7 +9,21 @@ import re
 import warnings
 import logging
 from pglast import parse_sql, prettify
+from pglast.parser import parse_sql_json
 from pglast.ast import Node
+from pglast import node
+
+
+class ParsedNode(node.Node):
+    def set_context(self, original_string, comments):
+        self.original_string = original_string
+        self.comments = comments
+        self.language = None
+        if self.node_tag == 'CreateFunctionStmt':
+            # Find the language used
+            for option in self.options:
+                if option.defname == 'language':
+                    self.language = option.arg.val
 
 
 class ParserState():
@@ -117,15 +131,9 @@ class Parser():
                         logger.debug(e)
                         continue
 
-            parse_stmt = Node(parse_sql(stmt)[0]).stmt
-            if comments:
-                parse_stmt.parse_tree['comments'] = comments
-            parse_stmt.parse_tree['original_string'] = stmt
-            if parse_stmt.node_tag == 'CreateFunctionStmt':
-                # Find the language used
-                for option in parse_stmt.options:
-                    if option.defname == 'language':
-                        parse_stmt.parse_tree['language'] = option.arg.string_value
+            parse_stmt = ParsedNode(parse_sql(stmt)[0].stmt)
+            parse_stmt.set_context(original_string=stmt, comments=comments)
+
             yield parse_stmt
 
     def handle_plain(self, buf):
@@ -233,6 +241,10 @@ class Parser():
             if ch == "*" and buf[idx + 1] == "/":
                 self.stack.pop()
                 self.comments.append(self.current_comment)
+                com = Comment(self.current_comment,
+                              self.current_pos_in_statement,
+                              idx)
+                self.current_statements_comments.append(com.to_node_dict())
                 self.current_comment = ""
                 self.current_pos_in_statement += idx + 2
                 self.current_statement += "*/"
